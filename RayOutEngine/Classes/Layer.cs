@@ -33,7 +33,7 @@ using System.Drawing.Drawing2D;
 namespace RayOutEngine.Classes
 {
     /**
-    * Transparency layer for rendering
+    * Transparency layer for rendering. This layer is superposed to the background image, in order to achieve the lighting effect
     *@author Jean-Milost Reymond
     */
     class Layer
@@ -95,90 +95,53 @@ namespace RayOutEngine.Classes
             ClientRect = clientRect;
         }
 
+        /**
+        * Draws the layer
+        *@param gfx - graphic context to draw to
+        *@param pos - center position from which the light is shining
+        */
         public void Draw(Graphics gfx, Vector2 pos)
         {
             gfx.SmoothingMode = SmoothingMode.AntiAlias;
 
             foreach (RaySource raySource in RaySources)
             {
-                // Create a path that consists of a single ellipse
+                // create a path that consists of a single ellipse
                 GraphicsPath rayGradientPath = new GraphicsPath();
                 rayGradientPath.AddEllipse((int)pos.X - 250, (int)pos.Y - 250, 500, 500);
 
                 // use the path to construct a brush
-                PathGradientBrush rayGradientBrush = new PathGradientBrush(rayGradientPath);
-
-                // set the color at the center of the path
-                rayGradientBrush.CenterColor = Color.FromArgb(0, 0, 0, 0);
+                PathGradientBrush rayGradientBrush = new PathGradientBrush(rayGradientPath)
+                {
+                    // set the color at the center of the path
+                    CenterColor = Color.FromArgb(0, 0, 0, 0)
+                };
 
                 // set the color along the entire boundary of the path
-                Color[] surroundColors = { Color.FromArgb(192, 0, 0, 0) };
+                Color[] surroundColors          = { Color.FromArgb(192, 0, 0, 0) };
                 rayGradientBrush.SurroundColors = surroundColors;
 
-                /*REM
-                Color[] colors =
-                {
-                    Color.FromArgb(255, 0, 0, 0),
-                    Color.FromArgb(255, 0, 0, 0),
-                    Color.FromArgb(0, 0, 0, 0)
-                };
-
-                float[] colorPos =
-                {
-                    0.0f,
-                    0.001f,
-                    1.0f
-                };
-
-                ColorBlend colorBlend = new ColorBlend(3);
-                colorBlend.Colors     = colors;
-                colorBlend.Positions  = colorPos;
-
-                rayGradientBrush.InterpolationColors = colorBlend;
-                */
-
-                /*
-                raySource.Pos    = pos;
-                raySource.RayPen = new Pen(rayGradientBrush);
-                raySource.Draw(gfx, Boundaries, false);
-                */
-
-                /*
+                // create the graphic path for the enlightened area
                 GraphicsPath rayPath = new GraphicsPath();
-                raySource.Pos = pos;
-                raySource.FillPath(rayPath, Boundaries, false, false);
-                gfx.DrawPath(new Pen(rayGradientBrush), rayPath);
-                */
-
-                /**/
-                GraphicsPath rayPath = new GraphicsPath();
-                raySource.Pos = pos;
+                raySource.Pos        = pos;
                 raySource.FillPath(rayPath, Boundaries, true, false);
+
+                // clip the canvas border and the enlightened area from the layer (because the layer is a darkening filter
+                // above the whole background image)
                 gfx.FillPath(rayGradientBrush, rayPath);
-                /**/
-
-                /*
-                gfx.SetClip(m_ClientRect);
-                gfx.SetClip(rayPath, CombineMode.Exclude);
-                SolidBrush blackBrush = new SolidBrush(Color.FromArgb(255, 0, 0, 0));
-                gfx.FillRectangle(blackBrush, m_ClientRect);
-                gfx.ResetClip();
-
-                gfx.SetClip(m_ClientRect);
-                gfx.SetClip(rayGradientPath, CombineMode.Exclude);
-                gfx.FillRectangle(blackBrush, m_ClientRect);
-                gfx.ResetClip();
-                */
-
                 gfx.SetClip(m_ClientRect);
                 gfx.SetClip(rayPath, CombineMode.Exclude);
                 gfx.SetClip(rayGradientPath, CombineMode.Complement);
                 gfx.SetClip(m_ClientRect, CombineMode.Xor);
+
+                // draw the layer above the background image
                 SolidBrush blackBrush = new SolidBrush(Color.FromArgb(192, 0, 0, 0));
                 gfx.FillRectangle(blackBrush, m_ClientRect);
+
                 gfx.ResetClip();
             }
 
+            // draw the boundaries at the end, thus they will not be affected by the layer
             Boundaries.Draw(gfx);
         }
     }
